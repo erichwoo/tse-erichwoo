@@ -9,7 +9,6 @@
 #include "bag.h"
 #include "hashtable.h"
 
-
 /*
  * Helper function to check if given directory exists
  * @param dir the given directory
@@ -114,50 +113,6 @@ int pagesaver(FILE* fp, webpage_t* page) {
   fprintf(fp, "%s\n%d\n%s", webpage_getURL(page), webpage_getDepth(page), webpage_getHTML(page));
   return 0;
 }
-
-/*
- * Scans a page for embedded URLs, adding them to unseen ht and seen bag
- * @param bag the bag of unexplored webpages
- * @param ht the hashtable of seen URLs
- * @return 0 for success, 1 for error
- */
-/*int pagescanner(bag_t* bag, hashtable_t* ht, webpage_t* page) {
-  if (bag == NULL) {
-    fprintf(stderr, "Error: NULL bag");
-    return 1;
-  }
-  if (ht == NULL) {
-    fprintf(stderr, "Error: NULL hashtable");
-    return 1;
-  }
-  if (page == NULL) {
-    fprintf(stderr, "Error: NULL page");
-    return 1;
-  }
-  if (webpage_getHTML(page) == NULL) {
-    fprintf(stderr, "Error: non-NULL html required");
-    return 1;
-  }
-
-  int pos = 0;
-  char *url;
-  while ((url = webpage_getNextURL(page, &pos)) != NULL) {
-    if (IsInternalURL(url) &&
-	hashtable_insert(ht, url, "")) {
-      webpage_t* new_page; // will be free'd when bag is deleted
-      if ((new_page = pagefetcher(url, webpage_getDepth(page) + 1))
-	  != NULL)
-	bag_insert(bag, new_page);
-      else {
-	fprintf(stderr, "Error creating new webpage for embedded URL");
-	return 1;
-      }
-    }
-    free(url);
-  }
-  return 0;
-}
-*/
 
 /*
  * Scans a page for the next URL, updating pos

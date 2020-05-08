@@ -1,3 +1,4 @@
+crawler
 crawler.c~
 crawler.o
 crawler.o~
@@ -9,3 +10,4 @@ IMPLEMENTATION.md~
 TESTING.md~
 .gitignore~
 core
+tse-output/

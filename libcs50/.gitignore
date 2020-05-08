@@ -1,0 +1,10 @@
+bag.o
+counters.o
+file.o
+hashtable.o
+memory.o
+set.o
+webpage.o
+.gitignore~
+Makefile~
+core
