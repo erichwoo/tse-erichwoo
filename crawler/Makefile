@@ -6,7 +6,7 @@ L = ../libcs50
 C = ../common
 
 #Uncomment to turn on testing mode
-UNITTEST = -DTEST
+#UNITTEST = -DTEST
 
 CC = gcc
 CFLAGS = -Wall -pedantic -std=c11 -ggdb -lm $(UNITTEST) -I$L -I$C
