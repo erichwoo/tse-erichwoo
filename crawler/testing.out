@@ -1,0 +1,27 @@
+bash -v testing.sh
+seedURL is: 'http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html'
+externalURL is: 'www.google.com'
+and nonexistantURL is: 'gotcha'
+
+setting up crawler directory for testing...
+make[1]: Entering directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/crawler'
+rm -rf crawler tse-output/ unwritable/ .*~ *~ *.o *.dSYM core
+make[1]: Leaving directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/crawler'
+make[1]: Entering directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/crawler'
+gcc -Wall -pedantic -std=c11 -ggdb -I../libcs50 -I../common   -c -o crawler.o crawler.c
+gcc -Wall -pedantic -std=c11 -ggdb -I../libcs50 -I../common crawler.o ../libcs50/libcs50-given.a ../common/common.a -o crawler
+make[1]: Leaving directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/crawler'
+
+creating tse-output/ and unwritable/ and changing permissions for unwritable/
+
+Testing incorrect number of arguments...
+
+Testing external URL...
+
+Testing nonexistant URL...
+
+Testing a non-existent directory 'test'...
+
+Testing unwritable directory...
+
+Testing a negative maxDepth...

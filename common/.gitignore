@@ -1,0 +1,10 @@
+pagedir.c~
+pagedir.h~
+pagedir.o
+pagedir.o~
+common.a
+common.a~
+Makefile~
+README.md~
+.gitignore~
+core
