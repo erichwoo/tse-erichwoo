@@ -75,9 +75,8 @@ int main(int argc, char* argv[]) {
   hashtable_insert(ht, seed_URL, "");
 
   /**************** BEGIN CRAWLING ********************/
-#ifdef TEST
   printf("begin crawling...\n\n");
-#endif
+
   id = 1;
   while ((curr_page = bag_extract(bag)) != NULL) {
     // allocate enough space for storing id in string type
@@ -156,7 +155,7 @@ int main(int argc, char* argv[]) {
     webpage_delete(curr_page); // free page after done using it
     curr_page = NULL; // must manually because still allocated although extracted
   }
-  printf("bag is now empty. crawling is complete.\n");
+  printf("bag is now empty. crawling is complete. %d file(s) saved in %s\n", id - 1, page_dir);
   
   /****************** DELETION ********************/
   bag_delete(bag, webpage_delete);

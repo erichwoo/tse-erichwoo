@@ -12,7 +12,7 @@ CC = gcc
 CFLAGS = -Wall -pedantic -std=c11 -ggdb -lm $(UNITTEST) -I$L -I$C
 PROG = crawler
 OBJS = $(PROG).o
-LLIBS = $L/libcs50-given.a $C/common.a
+LLIBS = $L/libcs50.a $C/common.a
 
 $(PROG): $(OBJS) $(LLIBS)
 	$(CC) $(CFLAGS) $^ -o $@
