@@ -1,10 +1,6 @@
-pagedir.c~
-pagedir.h~
-pagedir.o
-pagedir.o~
+*~
+.*~
+*.o
+*.dSYM
 common.a
-common.a~
-Makefile~
-README.md~
-.gitignore~
 core

@@ -1,0 +1,6 @@
+.*~
+*~
+core
+.dSYM
+data/
+test.c

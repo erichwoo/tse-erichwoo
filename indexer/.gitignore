@@ -1,0 +1,7 @@
+.*~
+*~
+*.o
+indexer
+indextest
+core
+.dSYM

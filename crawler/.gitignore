@@ -1,13 +1,7 @@
+.*~
+*~
+*.o
 crawler
-crawler.c~
-crawler.o
-crawler.o~
-testing.sh~
-testing.out~
-Makefile~
-README.md~
-IMPLEMENTATION.md~
-TESTING.md~
-.gitignore~
 core
 tse-output/
+unwritable/

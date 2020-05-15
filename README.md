@@ -7,4 +7,4 @@ To build, run `make`.
 
 To clean up, run `make clean`.
 
-No Comments.
+To test crawler, indexer, or querier, run `make test` in the respective directories.

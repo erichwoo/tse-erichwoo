@@ -71,7 +71,7 @@ do
 	echo -e "\n==> $j <=="
 	sed -n "1,4p" $j
     done
-    #cat tse-output/* #uncomment and comment above line if desiring full HTML print
+    #cat tse-output/* #uncomment and comment for loop above if desiring full HTML print
     rm -rf tse-output #clean and remake tse-output for use again so
     mkdir tse-output #no confusion about which files are new or old    
 done
@@ -88,7 +88,7 @@ do
     echo -e "\n==> $j <=="
     sed -n "1,4p" $j
 done
-#cat tse-output/* #uncomment and comment above line if desiring full HTML print
+#cat tse-output/* 
 rm -rf tse-output
 mkdir tse-output
 
@@ -98,21 +98,21 @@ seedURL=http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/
 
 for i in 0 1 2
 do
-echo -e "\n*********** Testing at depth $i *************"
-./crawler $seedURL tse-output $i
-echo -e "\ntse-output directory contents are: \n"
-for j in tse-output/*
-do
-    echo -e "\n==> $j <=="
-    sed -n "1,4p; 10p;" $j
-done
-#cat tse-output/* #uncomment and comment above line if desiring full HTML print
-rm -rf tse-output
-mkdir tse-output
+    echo -e "\n*********** Testing at depth $i *************"
+    ./crawler $seedURL tse-output $i
+    echo -e "\ntse-output directory contents are: \n"
+    for j in tse-output/*
+    do
+	echo -e "\n==> $j <=="
+	sed -n "1,4p; 10p;" $j
+    done
+    #cat tse-output/* 
+    rm -rf tse-output
+    mkdir tse-output
 done
 
 ############### cleanup ####################
 
-rm -rf unwritable/
+rm -rf unwritable/ 
 
 echo -e "\nTESTING COMPLETE!\n"

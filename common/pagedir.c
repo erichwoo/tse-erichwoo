@@ -1,53 +1,48 @@
 /* Author: Erich Woo
  * Date: 6 May 2020
- * Purpose: class of functions for manipulating a webpage with a URL
+ * Purpose: class of functions for manipulating a webpage with a URL.
+ * See 'pagedir.h' for documentation.
  */
 
-#include <stdio.h>
-#include <string.h>
-#include "webpage.h"
-#include "bag.h"
-#include "hashtable.h"
+#include "pagedir.h"
 
-/*
- * Helper function to check if given directory exists
- * @param dir the given directory
- * @return 0 if directory exists, 1 otherwise 
- */
-int dir_exists(char* dir) {
+int numDigits(int x) {
+  if (x < 10)
+    return 1;
+  return 1 + numDigits(x / 10);
+}
+
+int dir_exists(char* dir, int type) {
+  if (dir == NULL)
+    return 1;
   char* test = (char*) calloc(strlen(dir) + strlen("/.crawler") + 1, sizeof(char)); // length of char* including '/' to emcompase both cases
   FILE* fp;
+  char* check = (char*) calloc(strlen("r") + 1, sizeof(char));
   
   strcpy(test, dir);
   // if dir didn't contain a '/' at end of string, add it
   if (strcmp(test + strlen(test) - strlen("/"), "/") != 0)
     strcat(test, "/");
   strcat(test, ".crawler");
-  
-  if ((fp = fopen(test, "w")) != NULL) {
-    fclose(fp);
-    free(test);
-    return 0;
+
+  if (type == 0)
+    strcpy(check, "r");
+  else if (type == 1)
+    strcpy(check, "w");
+   
+  if (strcmp(check, "") != 0) {
+    if ((fp = fopen(test, check)) != NULL) {
+      fclose(fp);
+      free(test);
+      free(check);
+      return 0;
+    }
   }
   free(test);
+  free(check);
   return 1;
 }
 
-/*
- * Helper method for consilidating the error-checking for a given webpage
- *
- * Error cases:
- * 1. page is NULL
- * 2. url isn't valid and/or internal
- * 3. depth is negative
- * 4. asked for non-NULL html but given NULL html
- * 5. asked for NULL html but given nonNULL html
- *
- * @param page the given webpage
- * @param html boolean whether a page with (true) or without (false) html is desired
- * @param message whether or not user wants error messages to print to stderr
- * @return 0 on no errors found, non-zero on error
- */
  int is_valid_page(webpage_t* page, bool html, bool message) {
   if (page == NULL) {
     if (message) 
@@ -77,13 +72,6 @@ int dir_exists(char* dir) {
   return 0;
 }
 
-/* 
- * Fetches the html for webpage and adds it to the struct
- * Assumes page allocated by caller
- *
- * @param page the webpage with url, depth, NULL html
- * @return 0 on successful fetch, 1 otherwise
- */
 int pagefetcher(webpage_t* page) {
   if (is_valid_page(page, false, true) != 0)
     return 1;
@@ -94,14 +82,6 @@ int pagefetcher(webpage_t* page) {
   return 0;
 }
 
-/*
- * Writes a page's html to a file
- * Assumes fp is error-checked outside of call for writability
- *
- * @param fp the file to write into
- * @param page the page to write
- * @return 0 for success, 1 for error
- */
 int pagesaver(FILE* fp, webpage_t* page) {
   if (fp == NULL) {
     fprintf(stderr, "Error: NULL file pointer\n");
@@ -114,12 +94,6 @@ int pagesaver(FILE* fp, webpage_t* page) {
   return 0;
 }
 
-/*
- * Scans a page for the next URL, updating pos
- * @param page the webpage to scan
- * @param pos the position to start scanning
- * @return the next extracted URL, NULL otherwise
- */
 char* pagescanner(webpage_t* page, int* pos) {
   if (is_valid_page(page, true, true) != 0) {
     return NULL;

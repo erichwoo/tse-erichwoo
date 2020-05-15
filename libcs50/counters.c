@@ -62,20 +62,19 @@ int counters_add(counters_t *ctrs, const int key) {
     counternode_t *node = counters_get_node(ctrs, key);
     if (node == NULL) { // key doesn't exist yet
       // allocate a new node to be added to the list
-      counternode_t *new = counternode_new(key);
-      if (new != NULL) {
+      node = counternode_new(key);
+      if (node != NULL) {
 	// add it to the head of the list
-	new->next = ctrs->head;
-	ctrs->head = new;
-	new->count++;
-	return new->count;
+	node->next = ctrs->head;
+	ctrs->head = node;
       }
-    } else {
-      node->count++;
-      return node->count;
-    }
+      else
+	return 0;
+    } 
+    node->count++;
+    return node->count;
   }
-  return 0; // also occurs if allocation of new node fails
+  return 0; 
 }
 
 int counters_get(counters_t *ctrs, const int key) {
@@ -91,17 +90,17 @@ bool counters_set(counters_t *ctrs, const int key, const int count) {
   if (ctrs != NULL && key >= 0 && count >= 0) {
     counternode_t *node = counters_get_node(ctrs,key);
     if (node == NULL) { // key doesnt exist yet
-      counternode_t *new = counternode_new(key);
-      if (new != NULL) {
+      node = counternode_new(key);
+      if (node != NULL) {
         // add it to the head of the list                                          
-        new->next = ctrs->head;
-        ctrs->head = new;
-	return true;
+        node->next = ctrs->head;
+        ctrs->head = node;
       }
-    } else {
-      node->count = count;
-      return true;
-    }
+      else
+	return false;
+    } 
+    node->count = count;
+    return true;
   }
   return false;
 }

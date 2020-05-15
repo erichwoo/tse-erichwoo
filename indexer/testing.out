@@ -1,0 +1,421 @@
+bash -v testing.sh
+switchml () {  typeset swfound=1;
+ if [ "${MODULES_USE_COMPAT_VERSION:-0}" = '1' ]; then
+ typeset swname='main';
+ if [ -e /usr/share/Modules/libexec/modulecmd.tcl ]; then
+ typeset swfound=0;
+ unset MODULES_USE_COMPAT_VERSION;
+ fi;
+ else
+ typeset swname='compatibility';
+ if [ -e /usr/share/Modules/libexec/modulecmd-compat ]; then
+ typeset swfound=0;
+ MODULES_USE_COMPAT_VERSION=1;
+ export MODULES_USE_COMPAT_VERSION;
+ fi;
+ fi;
+ if [ $swfound -eq 0 ]; then
+ echo "Switching to Modules $swname version";
+ source /usr/share/Modules/init/bash;
+ else
+ echo "Cannot switch to Modules $swname version, command not found";
+ return 1;
+ fi
+}
+module () {  _module_raw "$@" 2>&1
+}
+_module_raw () {  unset _mlshdbg;
+ if [ "${MODULES_SILENT_SHELL_DEBUG:-0}" = '1' ]; then
+ case "$-" in 
+ *v*x*)
+ set +vx;
+ _mlshdbg='vx'
+ ;;
+ *v*)
+ set +v;
+ _mlshdbg='v'
+ ;;
+ *x*)
+ set +x;
+ _mlshdbg='x'
+ ;;
+ *)
+ _mlshdbg=''
+ ;;
+ esac;
+ fi;
+ unset _mlre _mlIFS;
+ if [ -n "${IFS+x}" ]; then
+ _mlIFS=$IFS;
+ fi;
+ IFS=' ';
+ for _mlv in ${MODULES_RUN_QUARANTINE:-};
+ do
+ if [ "${_mlv}" = "${_mlv##*[!A-Za-z0-9_]}" -a "${_mlv}" = "${_mlv#[0-9]}" ]; then
+ if [ -n "`eval 'echo ${'$_mlv'+x}'`" ]; then
+ _mlre="${_mlre:-}${_mlv}_modquar='`eval 'echo ${'$_mlv'}'`' ";
+ fi;
+ _mlrv="MODULES_RUNENV_${_mlv}";
+ _mlre="${_mlre:-}${_mlv}='`eval 'echo ${'$_mlrv':-}'`' ";
+ fi;
+ done;
+ if [ -n "${_mlre:-}" ]; then
+ eval `eval ${_mlre}/usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash '"$@"'`;
+ else
+ eval `/usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash "$@"`;
+ fi;
+ _mlstatus=$?;
+ if [ -n "${_mlIFS+x}" ]; then
+ IFS=$_mlIFS;
+ else
+ unset IFS;
+ fi;
+ unset _mlre _mlv _mlrv _mlIFS;
+ if [ -n "${_mlshdbg:-}" ]; then
+ set -$_mlshdbg;
+ fi;
+ unset _mlshdbg;
+ return $_mlstatus
+}
+#!/bin/bash
+# Script Name: testing.sh
+# Author: Erich Woo
+# Date: 14 May 2020
+# Testing for indexer.c and indextest.c
+#
+# usage: bash -v testing.sh
+
+# define variables
+dir=~cs50/data/tse-output
+testdir=output
+sorteddir=sorteddata
+sortedtestdir=sortedoutput
+unreadabledir=unreadabledir
+unwriteabledir=unwriteabledir
+unwriteablefile=unwriteablefile
+echo -e "Directory of crawler output comes from: $dir\n"
+Directory of crawler output comes from: /net/ifs-users/cs50/data/tse-output
+
+
+# setup
+mkdir $testdir
+mkdir $sorteddir
+mkdir $sortedtestdir
+mkdir $unreadabledir
+mkdir $unwriteabledir
+touch $unwriteablefile
+chmod u-r $unreadabledir
+chmod u-w $unwriteabledir
+chmod u-w $unwriteablefile
+echo -e "index and indextest files will be written to '$testdir/'. Sorted index and indextest files will be written to '$sortedtestdir/'. unreadable directory '$unreadabledir/' created. unwriteable directory '$unwriteabledir/' created.\n"
+index and indextest files will be written to 'output/'. Sorted index and indextest files will be written to 'sortedoutput/'. unreadable directory 'unreadabledir/' created. unwriteable directory 'unwriteabledir/' created.
+
+
+################# INDEXER.C ###################
+echo -e "\n~~~~~~~~~~~~~~~~~~TESTING FOR INDEXER.C STARTING~~~~~~~~~~~~~~~~~~\n"
+
+~~~~~~~~~~~~~~~~~~TESTING FOR INDEXER.C STARTING~~~~~~~~~~~~~~~~~~
+
+
+################# Error Cases #################
+echo -e "\n------------- Error Cases -------------"
+
+------------- Error Cases -------------
+
+# incorrect number of arguments
+echo -e "\n******* Testing incorrect number (1) of arguments *******"
+
+******* Testing incorrect number (1) of arguments *******
+./indexer $dir/letters-depth-5 
+Usage: ./indexer pageDirectory indexFilename
+
+# invalid pageDirectory
+echo -e "\n****** Testing invalid pageDirectory *******"
+
+****** Testing invalid pageDirectory *******
+./indexer invalid/ $testdir/letters-index-0
+Error: given pageDirectory must be valid and readable directory
+
+# unreadable pageDirectory
+echo -e "\n****** Testing unreadable pageDirectory ******"
+
+****** Testing unreadable pageDirectory ******
+./indexer $unreadabledir $testdir/letters-index-0
+Error: given pageDirectory must be valid and readable directory
+
+# invalid indexFilename path
+echo -e "\n****** Testing invalid indexFilename path ******"
+
+****** Testing invalid indexFilename path ******
+./indexer $dir/letters-depth-0 invalid/letters-index-0
+Error: given indexFilename must be valid and writable pathname
+
+# unwriteable indexFilename path
+echo -e "\n***** Testing unwriteable indexFilename path *****"
+
+***** Testing unwriteable indexFilename path *****
+./indexer $dir/letters-depth-0 $unwriteabledir/letters-index-0
+Error: given indexFilename must be valid and writable pathname
+
+############### Standard Cases ################
+echo -e "\n--------- Standard Cases ---------"
+
+--------- Standard Cases ---------
+
+# testing on letters-depth 0-5 (6 is identical to 5)
+echo -e "\n\n^^^^^^^^^^^ Testing on 'letters' directory ^^^^^^^^^^^^"
+
+
+^^^^^^^^^^^ Testing on 'letters' directory ^^^^^^^^^^^^
+for i in 0 1 2 3 4 5
+do
+    echo -e "\n********** Indexing on letters-depth-$i ***********"
+    ./indexer $dir/letters-depth-$i $testdir/letters-index-$i
+    echo -e "sorting '$dir/letters-index-$i' into .sorted file in '$sorteddir/'"
+    gawk -f indexsort.awk $dir/letters-index-$i > $sorteddir/letters-index-$i.sorted
+    echo -e "sorting '$testdir/letters-index-$i' into .sorted file in '$sortedtestdir/'"
+    gawk -f indexsort.awk $testdir/letters-index-$i > $sortedtestdir/letters-index-$i.sorted
+    echo -e "comparing '$sorteddir/letters-index-$i.sorted' with '$sortedtestdir/letters-index-$i.sorted'..."
+    echo -e "----------- Output of 'diff' command -------------"
+    diff -s $sorteddir/letters-index-$i.sorted $sortedtestdir/letters-index-$i.sorted
+done
+
+********** Indexing on letters-depth-0 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-0' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-0' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-0.sorted' with 'sortedoutput/letters-index-0.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-0.sorted and sortedoutput/letters-index-0.sorted are identical
+
+********** Indexing on letters-depth-1 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-1' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-1' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-1.sorted' with 'sortedoutput/letters-index-1.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-1.sorted and sortedoutput/letters-index-1.sorted are identical
+
+********** Indexing on letters-depth-2 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-2' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-2' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-2.sorted' with 'sortedoutput/letters-index-2.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-2.sorted and sortedoutput/letters-index-2.sorted are identical
+
+********** Indexing on letters-depth-3 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-3' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-3' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-3.sorted' with 'sortedoutput/letters-index-3.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-3.sorted and sortedoutput/letters-index-3.sorted are identical
+
+********** Indexing on letters-depth-4 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-4' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-4' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-4.sorted' with 'sortedoutput/letters-index-4.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-4.sorted and sortedoutput/letters-index-4.sorted are identical
+
+********** Indexing on letters-depth-5 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/letters-index-5' into .sorted file in 'sorteddata/'
+sorting 'output/letters-index-5' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/letters-index-5.sorted' with 'sortedoutput/letters-index-5.sorted'...
+----------- Output of 'diff' command -------------
+Files sorteddata/letters-index-5.sorted and sortedoutput/letters-index-5.sorted are identical
+
+# testing on toscrape-depth 0-2
+echo -e "\n\n^^^^^^^^^^^ Testing on 'toscrape' directory ^^^^^^^^^^^^"
+
+
+^^^^^^^^^^^ Testing on 'toscrape' directory ^^^^^^^^^^^^
+for i in 0 1 2
+do
+    echo -e "\n********** Indexing on toscrape-depth-$i ***********"
+    ./indexer $dir/toscrape-depth-$i $testdir/toscrape-index-$i
+    echo -e "sorting '$dir/toscrape-index-$i' into .sorted file in '$sorteddir/'"
+    gawk -f indexsort.awk $dir/toscrape-index-$i > $sorteddir/toscrape-index-$i.sorted
+    echo -e "sorting '$testdir/toscrape-index-$i' into .sorted file in '$sortedtestdir/'"
+    gawk -f indexsort.awk $testdir/toscrape-index-$i > $sortedtestdir/toscrape-index-$i.sorted
+    echo -e "comparing '$sorteddir/toscrape-index-$i.sorted' with '$sortedtestdir/toscrape-index-$i.sorted'..."
+    echo -e "------------ Output of 'diff' command -------------"
+    diff -s $sorteddir/toscrape-index-$i.sorted $sortedtestdir/toscrape-index-$i.sorted
+done
+
+********** Indexing on toscrape-depth-0 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/toscrape-index-0' into .sorted file in 'sorteddata/'
+sorting 'output/toscrape-index-0' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/toscrape-index-0.sorted' with 'sortedoutput/toscrape-index-0.sorted'...
+------------ Output of 'diff' command -------------
+Files sorteddata/toscrape-index-0.sorted and sortedoutput/toscrape-index-0.sorted are identical
+
+********** Indexing on toscrape-depth-1 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/toscrape-index-1' into .sorted file in 'sorteddata/'
+sorting 'output/toscrape-index-1' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/toscrape-index-1.sorted' with 'sortedoutput/toscrape-index-1.sorted'...
+------------ Output of 'diff' command -------------
+Files sorteddata/toscrape-index-1.sorted and sortedoutput/toscrape-index-1.sorted are identical
+
+********** Indexing on toscrape-depth-2 ***********
+sorting '/net/ifs-users/cs50/data/tse-output/toscrape-index-2' into .sorted file in 'sorteddata/'
+sorting 'output/toscrape-index-2' into .sorted file in 'sortedoutput/'
+comparing 'sorteddata/toscrape-index-2.sorted' with 'sortedoutput/toscrape-index-2.sorted'...
+------------ Output of 'diff' command -------------
+Files sorteddata/toscrape-index-2.sorted and sortedoutput/toscrape-index-2.sorted are identical
+
+echo -e "\n~~~~~~~~~~~~~~~~~TESTING FOR INDEXER.C COMPLETE~~~~~~~~~~~~~~~~~~\n"
+
+~~~~~~~~~~~~~~~~~TESTING FOR INDEXER.C COMPLETE~~~~~~~~~~~~~~~~~~
+
+
+################# INDEXTEST.C ###################
+echo -e "\n~~~~~~~~~~~~~~~~~TESTING FOR INDEXTEST.C STARTING ~~~~~~~~~~~~~~~~~~~\n"
+
+~~~~~~~~~~~~~~~~~TESTING FOR INDEXTEST.C STARTING ~~~~~~~~~~~~~~~~~~~
+
+
+################# Error Cases #################
+echo -e "\n------------- Error Cases -------------"
+
+------------- Error Cases -------------
+
+# incorrect number of arguments
+echo -e "\n******* Testing incorrect number (1) of arguments *******"
+
+******* Testing incorrect number (1) of arguments *******
+./indextest $testdir/letters-index-0
+Usage: ./indextest oldIndexFilename newIndexFilename
+
+# non-existent oldIndexFilename
+echo -e "\n****** Testing non-existent oldIndexFilename *******"
+
+****** Testing non-existent oldIndexFilename *******
+./indextest invalid/letters-index-0 $testdir/letters-test-0
+Error: oldIndexFilename must exist and be readable
+
+# unreadable oldIndexFilename
+echo -e "\n****** Testing unreadable oldIndexFilename ******"
+
+****** Testing unreadable oldIndexFilename ******
+echo -e "changing $testdir/letters-index-0 to unreadable..."
+changing output/letters-index-0 to unreadable...
+chmod u-r $testdir/letters-index-0
+./indextest $testdir/letters-index-0 $testdir/letters-test-0
+Error: oldIndexFilename must exist and be readable
+echo -e "\nchanging $testdir/letters-index-0 back to readable..."
+
+changing output/letters-index-0 back to readable...
+chmod u+r $testdir/letters-index-0
+
+# invalid newIndexFilename path
+echo -e "\n****** Testing invalid newIndexFilename path ******"
+
+****** Testing invalid newIndexFilename path ******
+./indextest $testdir/letters-index-0 invalid/letters-test-0
+Error: newIndexFilename must be valid and writable
+
+# unwriteable newIndexFilename path
+echo -e "\n***** Testing unwriteable newIndexFilename path *****"
+
+***** Testing unwriteable newIndexFilename path *****
+./indextest $testdir/letters-index-0 $unwriteablefile
+Error: newIndexFilename must be valid and writable
+
+############### Standard Cases ################
+echo -e "\n--------- Standard Cases ---------"
+
+--------- Standard Cases ---------
+
+# testing on letters-index 0-5
+echo -e "\n\n^^^^^^^^^^^ Testing on 'letters' index ^^^^^^^^^^^^"
+
+
+^^^^^^^^^^^ Testing on 'letters' index ^^^^^^^^^^^^
+for i in 0 1 2 3 4 5
+do
+    echo -e "\n********** IndexTest on letters-index-$i  ***********"
+    ./indextest $sortedtestdir/letters-index-$i.sorted $testdir/letters-test-$i
+    echo -e "sorting $testdir/letters-test-$i into .sorted file in '$sortedtestdir/'"
+    gawk -f indexsort.awk $testdir/letters-test-$i > $sortedtestdir/letters-test-$i.sorted
+    echo -e "comparing '$sortedtestdir/letters-index-$i.sorted' with '$sortedtestdir/letters-test-$i.sorted'..."
+    echo -e "-------------- Output of 'diff' command ------------------"
+    diff -s $sortedtestdir/letters-index-$i.sorted $sortedtestdir/letters-test-$i.sorted
+done
+
+********** IndexTest on letters-index-0  ***********
+sorting output/letters-test-0 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-0.sorted' with 'sortedoutput/letters-test-0.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-0.sorted and sortedoutput/letters-test-0.sorted are identical
+
+********** IndexTest on letters-index-1  ***********
+sorting output/letters-test-1 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-1.sorted' with 'sortedoutput/letters-test-1.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-1.sorted and sortedoutput/letters-test-1.sorted are identical
+
+********** IndexTest on letters-index-2  ***********
+sorting output/letters-test-2 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-2.sorted' with 'sortedoutput/letters-test-2.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-2.sorted and sortedoutput/letters-test-2.sorted are identical
+
+********** IndexTest on letters-index-3  ***********
+sorting output/letters-test-3 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-3.sorted' with 'sortedoutput/letters-test-3.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-3.sorted and sortedoutput/letters-test-3.sorted are identical
+
+********** IndexTest on letters-index-4  ***********
+sorting output/letters-test-4 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-4.sorted' with 'sortedoutput/letters-test-4.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-4.sorted and sortedoutput/letters-test-4.sorted are identical
+
+********** IndexTest on letters-index-5  ***********
+sorting output/letters-test-5 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/letters-index-5.sorted' with 'sortedoutput/letters-test-5.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/letters-index-5.sorted and sortedoutput/letters-test-5.sorted are identical
+
+# testing on toscrape-index 0-5
+echo -e "\n\n^^^^^^^^^^^ Testing on 'toscrape' index ^^^^^^^^^^^^"
+
+
+^^^^^^^^^^^ Testing on 'toscrape' index ^^^^^^^^^^^^
+for i in 0 1 2
+do
+    echo -e "\n********** IndexTest on toscrape-index-$i  ***********"
+    ./indextest $sortedtestdir/toscrape-index-$i.sorted $testdir/toscrape-test-$i
+    echo -e "sorting $testdir/toscrape-test-$i into .sorted file in '$sortedtestdir/'"
+    gawk -f indexsort.awk $testdir/toscrape-test-$i > $sortedtestdir/toscrape-test-$i.sorted
+    echo -e "comparing '$sortedtestdir/toscrape-index-$i.sorted' with '$sortedtestdir/toscrape-test-$i.sorted'..."
+    echo -e "-------------- Output of 'diff' command ------------------"
+    diff -s $sortedtestdir/toscrape-index-$i.sorted $sortedtestdir/toscrape-test-$i.sorted
+done
+
+********** IndexTest on toscrape-index-0  ***********
+sorting output/toscrape-test-0 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/toscrape-index-0.sorted' with 'sortedoutput/toscrape-test-0.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/toscrape-index-0.sorted and sortedoutput/toscrape-test-0.sorted are identical
+
+********** IndexTest on toscrape-index-1  ***********
+sorting output/toscrape-test-1 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/toscrape-index-1.sorted' with 'sortedoutput/toscrape-test-1.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/toscrape-index-1.sorted and sortedoutput/toscrape-test-1.sorted are identical
+
+********** IndexTest on toscrape-index-2  ***********
+sorting output/toscrape-test-2 into .sorted file in 'sortedoutput/'
+comparing 'sortedoutput/toscrape-index-2.sorted' with 'sortedoutput/toscrape-test-2.sorted'...
+-------------- Output of 'diff' command ------------------
+Files sortedoutput/toscrape-index-2.sorted and sortedoutput/toscrape-test-2.sorted are identical
+
+echo -e "\n~~~~~~~~~~~~~~~~~~TESTING FOR INDEXTEST.C COMPLETE~~~~~~~~~~~~~~~~~\n"
+
+~~~~~~~~~~~~~~~~~~TESTING FOR INDEXTEST.C COMPLETE~~~~~~~~~~~~~~~~~
+
+
+################## Cleanup ####################
+
+chmod u+w $unwriteabledir
+rm -rf $testdir $unreadabledir $unwriteabledir $sorteddir $sortedtestdir $unwriteablefile

@@ -15,19 +15,6 @@
 /* Global max_depth threshold max */
 const int max_threshold = 10;
 
-/* Helper method for converting int to string dynamically
- * Counts number of digits in integer
- * Assumes positive integers only
- *
- * @param int the integer to count
- * @return the number of digits
- */
-int numDigits(int x) {
-  if (x < 10)
-    return 1;
-  return 1 + numDigits(x / 10);
-}
-
 int main(int argc, char* argv[]) {
   /**************** INITIALIZE VARIABLES ***************/
   int max_depth, id, ht_size;
@@ -44,7 +31,7 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Usage: ./crawler seedURL pageDirectory maxDepth\n");
     return 1;
   }
-  if (dir_exists(argv[2]) != 0) { // invalid pageDirectory
+  if (dir_exists(argv[2], 1) != 0) { // invalid or nonwritable pageDirectory
     fprintf(stderr, "Error: given pageDirectory must be a valid writable directory\n");
     return 1;
   }

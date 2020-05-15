@@ -4,10 +4,14 @@
 
 ### Contents
 
-Contains `pagedir.c` module and corresponding `pagedir.h` header file. Read pagedir.h for details.
+    - `pagedir.c` module and corresponding `pagedir.h` header file. Read pagedir.h for details.
+    - `index.c` module and corresponding `index.h` header file. Read index.h for details.
+    - `word.c` module and corresponding `word.h` header file. Read word.h for details.
+
+Altogether, these three modules create the common.a library for external usage.
 
 ### Compilation
 
-To compile, simply `make`
+To compile, simply `make`. The corresponding object files, as well as `common.a` archive file will be generated.
 
-The object file, as well as `common.a` archive file will be generated.
+To clean, simply `make clean`

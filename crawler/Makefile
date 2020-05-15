@@ -17,13 +17,9 @@ LLIBS = $L/libcs50.a $C/common.a
 $(PROG): $(OBJS) $(LLIBS)
 	$(CC) $(CFLAGS) $^ -o $@
 
-all: $(PROG) $(PROG)test
-#dependencies
-
 .PHONY: clean test
 
 test: testing.sh
 	bash -v testing.sh
 clean:
 	rm -rf $(PROG) tse-output/ unwritable/ .*~ *~ *.o *.dSYM core
-
