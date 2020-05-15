@@ -5,9 +5,7 @@
 ### Contents
 
     - `indexer.c` module, building and writing the inverted-index data structure
-ls.
     - `indextext.c` module, loading and writing the inverted-index data structure
-
     - `testing.sh` for integration testing of `indexer.c` and `indextest.c`
 
 ### Compilation
@@ -27,3 +25,7 @@ To test, simply `make test`.
    
 *indextest* assumes:
    - The content of the index file follows the format specified in DESIGN.md
+
+### Notes
+
+*indextest* loads a hashtable with a load facter (lamda) ~0.75
