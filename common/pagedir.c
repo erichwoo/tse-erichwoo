@@ -6,10 +6,31 @@
 
 #include "pagedir.h"
 
-int numDigits(int x) {
+/* Helper method for converting int to string dynamically
+ * Counts number of digits in integer
+ * Assumes positive integers only
+ *
+ * @param int the integer to count
+ * @return the number of digits
+ */
+static int numDigits(int x) {
   if (x < 10)
     return 1;
   return 1 + numDigits(x / 10);
+}
+
+char* build_dir_id(char* dir, int id) {
+  char* str_id = (char*) calloc(numDigits(id) + 1, sizeof(char));
+  sprintf(str_id, "%d", id);
+  char* file = (char*) calloc(strlen(dir) + strlen("/") +
+                              strlen(str_id) + 1, sizeof(char));
+  strcpy(file, dir);
+  if (strcmp(file + strlen(file) - strlen("/"), "/") != 0)
+    strcat(file, "/"); // add '/' if page_dir doesnt already have it
+  strcat(file, str_id);
+
+  free(str_id);
+  return file;
 }
 
 int dir_exists(char* dir, int type) {

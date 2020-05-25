@@ -14,15 +14,18 @@
 
 /******************* functions ******************/
 
-/* Helper method for converting int to string dynamically
- * Counts number of digits in integer
- * Used by crawler and indexer
- * Assumes positive integers only
+/******************* build_dir_id ***********************/
+/* Builds and returns a pathname of form 'dir/id'
+ * Does NOT assume 'dir' ends or doesn't with '/'
+ * Assumes positive integer id
  *
- * @param int the integer to count
- * @return the number of digits
+ * Returned pathname must be later free'd by caller.
+ *
+ * @param dir the directory path
+ * @param id the filename
  */
-int numDigits(int x);
+char* build_dir_id(char* dir, int id);
+
   
 /******************** dir_exists ************************/
 /* Helper function to check if given directory exists

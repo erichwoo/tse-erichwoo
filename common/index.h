@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "file.h"
-#include "pagedir.h"  // for numDigits and dir_exists method
+#include "pagedir.h"  // for build_dir_id and dir_exists method
 #include "hashtable.h"
 #include "counters.h"
 #include "webpage.h"

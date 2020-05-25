@@ -1,0 +1,475 @@
+bash -v testing.sh
+switchml () {  typeset swfound=1;
+ if [ "${MODULES_USE_COMPAT_VERSION:-0}" = '1' ]; then
+ typeset swname='main';
+ if [ -e /usr/share/Modules/libexec/modulecmd.tcl ]; then
+ typeset swfound=0;
+ unset MODULES_USE_COMPAT_VERSION;
+ fi;
+ else
+ typeset swname='compatibility';
+ if [ -e /usr/share/Modules/libexec/modulecmd-compat ]; then
+ typeset swfound=0;
+ MODULES_USE_COMPAT_VERSION=1;
+ export MODULES_USE_COMPAT_VERSION;
+ fi;
+ fi;
+ if [ $swfound -eq 0 ]; then
+ echo "Switching to Modules $swname version";
+ source /usr/share/Modules/init/bash;
+ else
+ echo "Cannot switch to Modules $swname version, command not found";
+ return 1;
+ fi
+}
+module () {  _module_raw "$@" 2>&1
+}
+_module_raw () {  unset _mlshdbg;
+ if [ "${MODULES_SILENT_SHELL_DEBUG:-0}" = '1' ]; then
+ case "$-" in 
+ *v*x*)
+ set +vx;
+ _mlshdbg='vx'
+ ;;
+ *v*)
+ set +v;
+ _mlshdbg='v'
+ ;;
+ *x*)
+ set +x;
+ _mlshdbg='x'
+ ;;
+ *)
+ _mlshdbg=''
+ ;;
+ esac;
+ fi;
+ unset _mlre _mlIFS;
+ if [ -n "${IFS+x}" ]; then
+ _mlIFS=$IFS;
+ fi;
+ IFS=' ';
+ for _mlv in ${MODULES_RUN_QUARANTINE:-};
+ do
+ if [ "${_mlv}" = "${_mlv##*[!A-Za-z0-9_]}" -a "${_mlv}" = "${_mlv#[0-9]}" ]; then
+ if [ -n "`eval 'echo ${'$_mlv'+x}'`" ]; then
+ _mlre="${_mlre:-}${_mlv}_modquar='`eval 'echo ${'$_mlv'}'`' ";
+ fi;
+ _mlrv="MODULES_RUNENV_${_mlv}";
+ _mlre="${_mlre:-}${_mlv}='`eval 'echo ${'$_mlrv':-}'`' ";
+ fi;
+ done;
+ if [ -n "${_mlre:-}" ]; then
+ eval `eval ${_mlre}/usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash '"$@"'`;
+ else
+ eval `/usr/bin/tclsh /usr/share/Modules/libexec/modulecmd.tcl bash "$@"`;
+ fi;
+ _mlstatus=$?;
+ if [ -n "${_mlIFS+x}" ]; then
+ IFS=$_mlIFS;
+ else
+ unset IFS;
+ fi;
+ unset _mlre _mlv _mlrv _mlIFS;
+ if [ -n "${_mlshdbg:-}" ]; then
+ set -$_mlshdbg;
+ fi;
+ unset _mlshdbg;
+ return $_mlstatus
+}
+#!/bin/bash
+
+# Script Name: testing.sh
+# Author: Erich Woo
+# Date: 23 May 2020
+# Testing for querier.c
+#
+# usage: bash -v testing.sh
+
+# define variables
+dir=~cs50/data/tse-output
+unreadabledir=unreadabledir
+notcrawlerdir=notcrawlerdir
+unreadablefile=unreadablefile
+d=dartmouth
+c=college
+
+# setup
+make clean
+make[1]: Entering directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/querier'
+rm -rf querier fuzzquery unreadabledir notcrawlerdir unreadablefile testfile actual expected .*~ *~ *.o *.dSYM core
+make[1]: Leaving directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/querier'
+make
+make[1]: Entering directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/querier'
+gcc -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common   -c -o querier.o querier.c
+gcc -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common querier.o ../common/common.a ../libcs50/libcs50.a -o querier
+gcc -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common   -c -o fuzzquery.o fuzzquery.c
+gcc -Wall -pedantic -std=gnu11 -ggdb -I../libcs50 -I../common fuzzquery.o ../libcs50/libcs50.a -o fuzzquery
+make[1]: Leaving directory '/net/ifs-users/erichwoo/cs50/labs/tse-erichwoo/querier'
+
+mkdir $unreadabledir
+mkdir $notcrawlerdir
+touch $unreadablefile
+chmod u-r $unreadabledir
+chmod u-r $unreadablefile
+
+###################### Error Cases ########################
+
+echo -e "\n------------- Error Cases -------------"
+
+------------- Error Cases -------------
+
+############# Args Validation ###############
+# incorrect number of arguments
+echo -e "\n******* Testing incorrect number (1) of arguments *******"
+
+******* Testing incorrect number (1) of arguments *******
+./querier $dir/letters-depth-0 
+Usage: ./querier pageDirectory indexFilename
+
+# invalid pageDirectory
+echo -e "\n****** Testing invalid pageDirectory *******"
+
+****** Testing invalid pageDirectory *******
+./querier invalid/ $dir/letters-index-0
+Error: pageDirectory must be a existing readable crawler-created directory.
+
+# unreadable pageDirectory
+echo -e "\n****** Testing unreadable pageDirectory ******"
+
+****** Testing unreadable pageDirectory ******
+./querier $unreadabledir $dir/letters-index-0
+Error: pageDirectory must be a existing readable crawler-created directory.
+
+# not a .crawler created pageDirectory
+echo -e "\n****** Testing not-crawler-created pageDirectory ******"
+
+****** Testing not-crawler-created pageDirectory ******
+./querier $notcrawlerdir $dir/letters-index-0
+Error: pageDirectory must be a existing readable crawler-created directory.
+
+# invalid indexFilename path
+echo -e "\n****** Testing invalid indexFilename path ******"
+
+****** Testing invalid indexFilename path ******
+./querier $dir/letters-depth-0 invalid/letters-index-0
+Error: indexFilename must be a readable pathname.
+
+# unreadable indexFilename
+echo -e "\n****** Testing unreadable indexFilename ******"
+
+****** Testing unreadable indexFilename ******
+./querier $dir/letters-depth-0 $unreadablefile
+Error: indexFilename must be a readable pathname.
+
+############# Query Validation #################
+
+# create testfile of error cases for piping into stdin
+echo -e "\n********* Testing erroneous queries **********"
+
+********* Testing erroneous queries **********
+echo -e "Examples: leading/trailing 'and/or', adjacent 'and/or's, nonalphabetic characters"
+Examples: leading/trailing 'and/or', adjacent 'and/or's, nonalphabetic characters
+echo -e "and\nor\nand or\nand $d\nor $d\n$d and\n$d or\n$d and or $c\n$d and and $c\n$d or and $c\n$d or or $c\n$d $c!\n$d $c 250\nBackus-Naur Form" > testfile
+echo -e "\n~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~"
+
+~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~
+cat testfile
+and
+or
+and or
+and dartmouth
+or dartmouth
+dartmouth and
+dartmouth or
+dartmouth and or college
+dartmouth and and college
+dartmouth or and college
+dartmouth or or college
+dartmouth college!
+dartmouth college 250
+Backus-Naur Form
+echo -e "\n~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~
+./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1 < testfile
+Error: 'and' cannot be first.
+Error: 'or' cannot be first.
+Error: 'and' cannot be first.
+Error: 'and' cannot be first.
+Error: 'or' cannot be first.
+Error: 'and' cannot be last.
+Error: 'or' cannot be last.
+Error: 'and' and 'or' cannot be adjacent.
+Error: 'and' and 'and' cannot be adjacent.
+Error: 'or' and 'and' cannot be adjacent.
+Error: 'or' and 'or' cannot be adjacent.
+Error: bad character '!' in query.
+Error: bad character '2' in query.
+Error: bad character '-' in query.
+
+
+############## Standard Cases ###############
+echo -e "\n-------------- Standard Cases ------------"
+
+-------------- Standard Cases ------------
+
+############# Cases not testable by Fuzztesting ##########
+echo -e "\n~~~~~~~~~~~~~~~ Cases untestable by Fuzztesting ~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~ Cases untestable by Fuzztesting ~~~~~~~~~~~~~
+
+# create testfile for piping into stdin
+# some tests taken from cs50 website
+
+# Testing empty query
+echo -e "\n********** Testing empty query input ***********"
+
+********** Testing empty query input ***********
+echo -e "             " > testfile
+echo -e "\n~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~"
+
+~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~
+cat testfile
+             
+echo -e "\n~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~
+./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1 < testfile
+Query: 
+
+
+# Testing no documents matching
+echo -e "\n********* Testing No-Matching-Documents ***********"
+
+********* Testing No-Matching-Documents ***********
+echo -e "a bunch of words that definitely flabbergastinglycreatedword will not have a match for sureyduryrandomness" > testfile
+echo -e "\n~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~"
+
+~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~
+cat testfile
+a bunch of words that definitely flabbergastinglycreatedword will not have a match for sureyduryrandomness
+echo -e "\n~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~
+./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1 < testfile
+Query: a bunch of words that definitely flabbergastinglycreatedword will not have a match for sureyduryrandomness 
+No documents match
+-----------------------------------------------
+
+
+# variable output same expected output
+echo -e "\n***** Testing variable output with same expected output ******"
+
+***** Testing variable output with same expected output ******
+echo -e "Examples: capitalization, implicit 'and', extra whitespace"
+Examples: capitalization, implicit 'and', extra whitespace
+echo -e "Dartmouth College\n$d $c\n$d and $c\n      $d      AND     College      " > testfile
+echo -e "\n~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~"
+
+~~~~~~~~~ Contents of file to pipe into stdin for querier ~~~~~~~~~
+cat testfile
+Dartmouth College
+dartmouth college
+dartmouth and college
+      dartmouth      AND     College      
+echo -e "\n~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~
+./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1 < testfile
+Query: dartmouth college 
+Matches 3 documents (ranked):
+score 242 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+-----------------------------------------------
+Query: dartmouth college 
+Matches 3 documents (ranked):
+score 242 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+-----------------------------------------------
+Query: dartmouth and college 
+Matches 3 documents (ranked):
+score 242 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+-----------------------------------------------
+Query: dartmouth and college 
+Matches 3 documents (ranked):
+score 242 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+-----------------------------------------------
+
+
+# Regression Testing with expected output from cs50 website
+echo -e "\n***** Regression Testing with expected output from Requirements Spec *****"
+
+***** Regression Testing with expected output from Requirements Spec *****
+echo -e "querying 'dartmouth or computer science or programming or unix' and comparing with output from REQUIREMENTS.md (lines 143-152) for wikipedia-depth-1 (I suspect)"
+querying 'dartmouth or computer science or programming or unix' and comparing with output from REQUIREMENTS.md (lines 143-152) for wikipedia-depth-1 (I suspect)
+
+echo -e "dartmouth or computer science or programming or unix" > testfile
+./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1 < testfile > actual
+
+sed -n "143,152p" REQUIREMENTS.md > expected
+echo -e "\n~~~~~~~~~~ Results of 'diff' command ~~~~~~~~~~~"
+
+~~~~~~~~~~ Results of 'diff' command ~~~~~~~~~~~
+diff -s actual expected
+9c9
+< score   4 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+---
+> score   4 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/
+11d10
+< 
+echo -e "\nMy URL (first or the two) is actually correct, and expected output is wrong!!!! I checked $dir/wikipedia-depth-1/1 and the URL is actually (via 'head -1' command):"
+
+My URL (first or the two) is actually correct, and expected output is wrong!!!! I checked /net/ifs-users/cs50/data/tse-output/wikipedia-depth-1/1 and the URL is actually (via 'head -1' command):
+head -1 $dir/wikipedia-depth-1/1
+http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/index.html
+echo -e "\nAnd the '11d10' is because of the newline in my output, but for the expected output from REQUIREMENTS.md, I cut off at the line of dashes (since there was more error tests that would mess up). I didn't include the other error tests from REQUIREMENTS.md because of the ['Query?' prompt when stdin is a tty/keyboard] problem, as well as different implementation methods of error-checking leading to slightly different output."
+
+And the '11d10' is because of the newline in my output, but for the expected output from REQUIREMENTS.md, I cut off at the line of dashes (since there was more error tests that would mess up). I didn't include the other error tests from REQUIREMENTS.md because of the ['Query?' prompt when stdin is a tty/keyboard] problem, as well as different implementation methods of error-checking leading to slightly different output.
+
+echo -e "~~~~~~~~~~~ End of Manual Standard-Case Testing ~~~~~~~~~~~~~"
+~~~~~~~~~~~ End of Manual Standard-Case Testing ~~~~~~~~~~~~~
+
+############ Fuzztesting ##############
+echo -e "\n~~~~~~~~~~~~~~~~~ Fuzztesting ~~~~~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~~ Fuzztesting ~~~~~~~~~~~~~~~~~~~~
+
+# Fuzztesting on letters-index-3
+echo -e "\n***** Fuzztesting with same files & seed(0) as lecture notes *****"
+
+***** Fuzztesting with same files & seed(0) as lecture notes *****
+echo -e "Can't perform Regression testing since link is unaccessible from ~cs50, so just visually compare it!"
+Can't perform Regression testing since link is unaccessible from ~cs50, so just visually compare it!
+echo -e "\n~~~~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~~~~~
+./fuzzquery $dir/letters-index-3 10 0 | ./querier $dir/letters-depth-3 $dir/letters-index-3
+./fuzzquery: generating 10 queries from 15 words
+Error: bad character '-' in query.
+Query: search and biology 
+No documents match
+-----------------------------------------------
+Query: tse or for breadth or the first 
+Matches 2 documents (ranked):
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html
+-----------------------------------------------
+Query: tse this or biology 
+Matches 2 documents (ranked):
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/C.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html
+-----------------------------------------------
+Query: breadth or eniac this page and computational or eniac 
+Matches 2 documents (ranked):
+score   1 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/E.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+-----------------------------------------------
+Query: algorithm playground computational computational or for 
+Matches 6 documents (ranked):
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/C.html
+score   1 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/D.html
+score   1 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/E.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+score   1 doc   2: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/A.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html
+-----------------------------------------------
+Query: breadth 
+Matches 1 documents (ranked):
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+-----------------------------------------------
+Query: home depth or first 
+Matches 2 documents (ranked):
+score   2 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/D.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+-----------------------------------------------
+Query: for 
+Matches 6 documents (ranked):
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/C.html
+score   1 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/D.html
+score   1 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/E.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/B.html
+score   1 doc   2: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/A.html
+score   1 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html
+-----------------------------------------------
+Query: tse or biology or this and this and for 
+Matches 2 documents (ranked):
+score   2 doc   1: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/index.html
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/letters/C.html
+-----------------------------------------------
+
+
+# Fuzztesting on wikipedia-index-1
+echo -e "\n****** Fuzztesting on wikipedia-index-1 **********"
+
+****** Fuzztesting on wikipedia-index-1 **********
+echo -e "\n~~~~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~~~~~"
+
+~~~~~~~~~~~~~~~~~~~ Output ~~~~~~~~~~~~~~~~~~~~
+./fuzzquery $dir/wikipedia-index-1 10 0 | ./querier $dir/wikipedia-depth-1 $dir/wikipedia-index-1
+./fuzzquery: generating 10 queries from 6506 words
+Error: bad character '-' in query.
+Query: dereferencing and charinsert 
+Matches 1 documents (ranked):
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/C_(programming_language).html
+-----------------------------------------------
+Query: bruce or limburgs houston or encoded smtp 
+Matches 1 documents (ranked):
+score   2 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+-----------------------------------------------
+Query: explained ford or has 
+Matches 6 documents (ranked):
+score  28 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/C_(programming_language).html
+score  26 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score  19 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Hash_table.html
+score  17 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score  16 doc   2: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Linked_list.html
+score   8 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Unix.html
+-----------------------------------------------
+Query: interpreters or acm stem modules and templates or violations 
+Matches 4 documents (ranked):
+score   3 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/C_(programming_language).html
+score   2 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Unix.html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Hash_table.html
+-----------------------------------------------
+Query: handles manually johnson pioneers or puzzle 
+Matches 1 documents (ranked):
+score   1 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/C_(programming_language).html
+-----------------------------------------------
+Query: karl 
+Matches 2 documents (ranked):
+score   2 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Hash_table.html
+score   1 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+-----------------------------------------------
+Query: alphabetically quickly or city 
+Matches 1 documents (ranked):
+score   2 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+-----------------------------------------------
+Query: appealed 
+Matches 1 documents (ranked):
+score   1 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Unix.html
+-----------------------------------------------
+Query: diagnostic or polski or encoding and cmp and creator 
+Matches 6 documents (ranked):
+score   2 doc   6: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/C_(programming_language).html
+score   1 doc   7: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Computer_science.html
+score   1 doc   5: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Unix.html
+score   1 doc   4: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Dartmouth_College.html
+score   1 doc   3: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Hash_table.html
+score   1 doc   2: http://old-www.cs.dartmouth.edu/~cs50/data/tse/wikipedia/Linked_list.html
+-----------------------------------------------
+
+
+echo -e "\n---------------- Testing Complete -----------------"
+
+---------------- Testing Complete -----------------
+
+########### Cleanup #############
+rm -rf $unreadabledir $notcrawlerdir $unreadablefile testfile actual expected

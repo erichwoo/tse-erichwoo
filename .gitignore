@@ -4,3 +4,4 @@ core
 .dSYM
 data/
 test.c
+tse-output/

@@ -66,19 +66,9 @@ int main(int argc, char* argv[]) {
 
   id = 1;
   while ((curr_page = bag_extract(bag)) != NULL) {
-    // allocate enough space for storing id in string type
-    char* str_id = (char*) calloc(numDigits(id) + 1, sizeof(char));    
-    sprintf(str_id, "%d", id); // convert int id to str id for concatenation
-    // allocate enough space for storing the full filepath
-    char* filename = (char*) calloc(strlen(page_dir) + strlen("/") +
-				    strlen(str_id) + 1, sizeof(char));
+    char* filename = build_dir_id(page_dir, id);
     FILE* fp;
-    
-    strcpy(filename, page_dir);
-    if (strcmp(filename + strlen(filename) - strlen("/"), "/") != 0) 
-      strcat(filename, "/"); // add '/' if page_dir doesnt already have it
-    strcat(filename, str_id);
-    
+        
     if ((fp = fopen(filename, "w")) != NULL) {
       if (pagefetcher(curr_page) != 0 || pagesaver(fp, curr_page) != 0) {
 	fclose(fp);
@@ -138,7 +128,6 @@ int main(int argc, char* argv[]) {
       fprintf(stderr, "Error opening filepath for writing\n");
     }
     free(filename);
-    free(str_id);
     webpage_delete(curr_page); // free page after done using it
     curr_page = NULL; // must manually because still allocated although extracted
   }

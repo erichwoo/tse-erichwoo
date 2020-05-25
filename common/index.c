@@ -34,15 +34,7 @@ bool index_build(char* dir, hashtable_t* index) {
   int doc_id = 1;
   bool search_dir = true; // while fopen != null, keep incrementing for files
   while (search_dir) {
-    char* str_id = (char*) calloc(numDigits(doc_id) + 1, sizeof(char));
-    sprintf(str_id, "%d", doc_id); 
-    char* file = (char*) calloc(strlen(dir) + strlen("/") +
-                                    strlen(str_id) + 1, sizeof(char));
-    strcpy(file, dir);
-    if (strcmp(file + strlen(file) - strlen("/"), "/") != 0)
-      strcat(file, "/"); // add '/' if page_dir doesnt already have it                   
-    strcat(file, str_id);
-
+    char* file = build_dir_id(dir, doc_id);
     FILE* fp;
     if ((fp = fopen(file, "r")) != NULL) {
       char* url = freadlinep(fp);       // 1st line
@@ -77,7 +69,6 @@ bool index_build(char* dir, hashtable_t* index) {
     else { // if fopen is null, no more files left to read/increment
       search_dir = false;
     }
-    free(str_id);
     free(file);
   }
   return true;
