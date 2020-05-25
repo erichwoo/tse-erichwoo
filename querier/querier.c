@@ -1,7 +1,8 @@
 /* Author: Erich Woo
  * Date: 21 May 2020
- * Purpose:
- *
+ * Purpose: Reads an index produced by the Indexer 
+ * and the page files produced by the Crawler, 
+ * to interactively answer written queries entered by the user.
  */
 
 #include <stdio.h>
